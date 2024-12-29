@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { CreateUserController, LoginUserController, LogoutController, ProfileController } from "../controllers/User.controller.js";
+import { CreateUserController, GetAllUsersController, LoginUserController, LogoutController, ProfileController } from "../controllers/User.controller.js";
 import { body } from "express-validator";
 import { IsUserAuthenticated } from "../middleware/Auth.js";
 
@@ -18,7 +18,6 @@ router.post('/login',
 
 router.get('/profile',IsUserAuthenticated,ProfileController )
 router.get('/logout',IsUserAuthenticated,LogoutController)
-
-
+router.get('/all',IsUserAuthenticated,GetAllUsersController)
 
 export {router as UserRouter}

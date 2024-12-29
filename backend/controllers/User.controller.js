@@ -142,7 +142,7 @@ export const LogoutController = async (req,res) => {
 
     RedisCLI.set(Token,'logout','EX',60 * 60 * 24)
 
-    res.cookie('token','')
+    res.cookie('token',' ')
     return res.status(200).json({
       message:"Logout Successfull",
       success:true
@@ -152,6 +152,24 @@ export const LogoutController = async (req,res) => {
     res.status(500).json({
       message:"Something Went Wrong",
       success:false
+    })
+  }
+}
+
+export const GetAllUsersController = async (req,res) => {
+  try {
+    const User = req.User
+    const AllUsers = await UserModel.find({ _id: { $ne: User._id } })
+
+    return res.status(200).json({
+      success:true,
+      Users:AllUsers
+    })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({
+      message: "Something went wrong",
+      success: false,
     })
   }
 }

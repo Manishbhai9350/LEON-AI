@@ -19,7 +19,13 @@ const UserSchema = mongoose.Schema({
         min:[8,'Password must be at least 8 characters'],
         max:[20,'Password must be less then 20 characters'],
         select:false
-    }
+    },
+    projects:[
+        {
+            type:mongoose.Schema.Types.ObjectId,
+            ref:'Project'
+        }
+    ]
 })
 
 
