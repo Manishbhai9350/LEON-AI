@@ -48,7 +48,6 @@ IO.use(async (socket, next) => {
         next(new Error('Unauthorized'));
     }
 });
-
 IO.on('connection', socket => { 
     const ProjectID = socket.Project._id;
     console.log(ProjectID);
@@ -56,10 +55,14 @@ IO.on('connection', socket => {
     
     socket.on('project-message', data => {
         // Emit the message to all users in the room
-        console.log(data,ProjectID)
+        console.log(data, ProjectID);
         socket.to(ProjectID.toString()).emit('project-message-receive', data);
     });
-    console.log(socket.id, ' connected');
+
+    socket.on('disconnect', () => {
+        console.log(`User disconnected from project: ${ProjectID}`);
+        socket.leave(ProjectID.toString());
+    });
 });
 
 server.listen(PORT)
