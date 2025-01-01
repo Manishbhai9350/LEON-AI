@@ -4,7 +4,8 @@ import { SocketContext } from '../context/Socket.context.jsx';
 export const useSocket = () => {
     const  IOConnection = useContext(SocketContext);
     if (!IOConnection) {
-        return throw new Error("useSocket must be used in Socket Context Provider")
+        throw new Error("useSocket must be used in Socket Context Provider")
+        return;
     }
     return IOConnection;
 };

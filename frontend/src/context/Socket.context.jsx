@@ -1,20 +1,40 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
 
-const SocketContext = createContext();
+export const SocketContext = createContext();
 
 export const SocketContextProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
-  useEffect(() => {
-    async function ConnectSocket() {
-        console.log('Connecting To Socket  ',import.meta.env.VITE_SERVER_URL)
-        const newSocket = await io(import.meta.env.VITE_SERVER_URL); // Update with your server URL
-        setSocket(newSocket);
+  const ConnectSocket = async (ProjectID) => {
+    const Token = localStorage.getItem("auth/v1");
+    console.log("Connecting To Socket  ", import.meta.env.VITE_SERVER_URL);
+    if (Token) {
+      const newSocket = io(import.meta.env.VITE_SERVER_URL, {
+        auth: {
+          token:localStorage.getItem("auth/v1"),
+        },
+        query:{
+          ProjectID
+        }
+      });
+
+      newSocket.on('connect_error', (err) => {
+        console.error("Connection Error: ", err);
+      });
+
+      setSocket(newSocket);
+
+      // Log socket connection status
+      newSocket.on('connect', () => {
+        console.log("Socket connected with ID: ", newSocket.id);
+      });
     }
-    ConnectSocket()
+  };
+
+  useEffect(() => {
     return () => {
-        socket.close();
+      socket?.disconnect(); // Disconnect socket on cleanup
     };
   }, []);
 
@@ -31,7 +51,9 @@ export const SocketContextProvider = ({ children }) => {
   };
 
   return (
-    <SocketContext.Provider value={{ socket, listenEvent, emitEvent }}>
+    <SocketContext.Provider
+      value={{ socket, listenEvent, emitEvent, ConnectSocket, setSocket }}
+    >
       {children}
     </SocketContext.Provider>
   );

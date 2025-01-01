@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import useTheme from "../hooks/useTheme";
-import useUser from "../hooks/userUser";
+import useUser from "../hooks/useUser";
 import { IOAxios } from "../config/axios"; // Import IOAxios for making requests
 import Toast from "react-hot-toast"; // Import Toast for notifications
 

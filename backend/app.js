@@ -12,7 +12,12 @@ const app = express();
 
 CONNECT()
 
-app.use(cors())
+app.use(cors({
+    origin:'*',
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials:true,
+    preflightContinue:true,
+}))
 app.use(express.json())
 app.use(urlencoded({extended:true}))
 app.use(cookieParser())

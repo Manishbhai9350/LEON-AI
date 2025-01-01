@@ -3,8 +3,7 @@ import { useNavigate, useResolvedPath } from "react-router-dom";
 import { IOAxios } from "../../config/axios";
 import Toast from "react-hot-toast";
 import useTheme from "../../hooks/useTheme";
-import useUser from "../../hooks/userUser";
-
+import useUser from "../../hooks/useUser";
 const UserAuthProtector = ({ children }) => {
   const [IsAuthenticating, setIsAuthenticating] = useState(true);
   const { Theme } = useTheme();
@@ -13,7 +12,6 @@ const UserAuthProtector = ({ children }) => {
 
   const { pathname } = useResolvedPath();
   const navigate = useNavigate();
-
   useEffect(() => {
     async function Authenticate() {
       try {

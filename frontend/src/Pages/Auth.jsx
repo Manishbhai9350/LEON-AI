@@ -3,7 +3,7 @@ import useTheme from '../hooks/useTheme'
 import {IOAxios} from '../config/axios'
 import {useNavigate} from 'react-router-dom' // Fixed: useNavigation -> useNavigate
 import Toast from 'react-hot-toast';
-import useUser from '../hooks/userUser';
+import useUser from '../hooks/useUser';
 import Nav from '../components/Nav';
 
 const Auth = () => {
@@ -36,7 +36,7 @@ const Auth = () => {
       navigate('/') // Fixed: Navigate -> navigate
     } catch (error) {
       Toast.error("Invalid Credentials")
-      console.error('Login error:', error)
+      console.log('Login error:', error)
     }
   }
 
@@ -52,7 +52,7 @@ const Auth = () => {
       navigate('/') // Fixed: Navigate -> navigate
     } catch (error) {
       Toast.error("Something Went Wrong")
-      console.error('Signup error:', error)
+      console.log('Signup error:', error)
     }
   }
 

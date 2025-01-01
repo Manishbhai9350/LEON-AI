@@ -3,7 +3,8 @@ import useTheme from "../hooks/useTheme";
 import { useNavigate } from "react-router-dom";
 import { IOAxios } from "../config/axios";
 import Toast from "react-hot-toast";
-import useUser from "../hooks/userUser";
+import useUser from "../hooks/useUser";
+import { useSocket } from "../hooks/socket";
 
 const Logout = () => {
   const { Theme } = useTheme();
