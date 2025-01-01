@@ -12,11 +12,11 @@ export const SocketContextProvider = ({ children }) => {
     if (Token) {
       const newSocket = io(import.meta.env.VITE_SERVER_URL, {
         auth: {
-          token:localStorage.getItem("auth/v1"),
+          token: localStorage.getItem("auth/v1"),
         },
-        query:{
-          ProjectID
-        }
+        query: {
+          ProjectID,
+        },
       });
 
       newSocket.on('connect_error', (err) => {
@@ -32,11 +32,13 @@ export const SocketContextProvider = ({ children }) => {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      socket?.disconnect(); // Disconnect socket on cleanup
-    };
-  }, []);
+  const disconnectSocket = () => {
+    if (socket) {
+      socket.disconnect();
+      console.log("Socket disconnected");
+      setSocket(null); // Clear the socket state
+    }
+  };
 
   const listenEvent = (event, callback) => {
     if (socket) {
@@ -50,9 +52,15 @@ export const SocketContextProvider = ({ children }) => {
     }
   };
 
+  const removeListener = (event, callback) => {
+    if (socket) {
+      socket.off(event, callback);
+    }
+  };
+
   return (
     <SocketContext.Provider
-      value={{ socket, listenEvent, emitEvent, ConnectSocket, setSocket }}
+      value={{ socket, listenEvent, emitEvent, removeListener, ConnectSocket, disconnectSocket, setSocket }}
     >
       {children}
     </SocketContext.Provider>

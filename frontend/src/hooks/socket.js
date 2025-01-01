@@ -5,7 +5,6 @@ export const useSocket = () => {
     const  IOConnection = useContext(SocketContext);
     if (!IOConnection) {
         throw new Error("useSocket must be used in Socket Context Provider")
-        return;
     }
     return IOConnection;
 };

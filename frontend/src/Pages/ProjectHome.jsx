@@ -23,8 +23,9 @@ const ProjectHome = () => {
 
   const UserPanelRef = useRef(null);
   const UserAddPanelRef = useRef(null);
+  const MessageBoxRef = useRef(null);
 
-  const { socket, ConnectSocket, emitEvent, listenEvent } = useSocket();
+  const { socket, ConnectSocket, emitEvent, listenEvent, disconnectSocket, removeListener } = useSocket();
   const { User } = useUser();
 
   async function GetProject() {
@@ -72,9 +73,9 @@ const ProjectHome = () => {
     const MessagePayload = {
       Message,
       Sender: {
-        id:User._id,
-        name:User.name ,
-        email:User.email
+        id: User._id,
+        name: User.name,
+        email: User.email,
       },
     };
     setMessages((prevMessages) => [...prevMessages, MessagePayload]);
@@ -126,18 +127,32 @@ const ProjectHome = () => {
     setAddUserPanel((prev) => !prev);
   }
 
+  const scrollToBottom = () => {
+    if (MessageBoxRef.current) {
+      MessageBoxRef.current.scrollTop =
+        MessageBoxRef.current.scrollHeight * 1.3;
+    }
+  };
+
   useEffect(() => {
     GetUsers();
     GetProject();
   }, []);
-
+  
   useEffect(() => {
     if (socket) {
       listenEvent("project-message-receive", (data) => {
         setMessages((prevMessages) => [...prevMessages, JSON.parse(data)]);
       });
     }
+    return () => {
+      disconnectSocket()
+    }
   }, [socket]);
+
+  useEffect(() => {
+    scrollToBottom(); // Scroll to bottom after receiving a message
+  }, [Messages]);
 
   return (
     <main
@@ -183,26 +198,28 @@ const ProjectHome = () => {
         </div>
         <div
           style={{ scrollbarWidth: 0 }}
+          ref={MessageBoxRef}
           className="chat w-full pb-[70px] overflow-y-scroll h-[90%] max-h-[90%] p-2"
         >
           {Messages.map((item, i) => (
-            <div key={i} className={`flex items-center  ${item.Sender.id == User._id ? 'justify-end' : 'justify-start'} items-center`}>
+            <div
+              key={i}
+              className={`flex items-center  ${
+                item.Sender.id == User._id ? "justify-end" : "justify-start"
+              } items-center`}
+            >
               <div
                 className={`message rounded-md p-2 w-fit  my-1 ${
                   Theme === "dark"
                     ? "bg-[#0c1320] text-white"
                     : "bg-black text-white"
                 } ${
-                    item.Sender.id !== User._id
-                      ? "rounded-tl-none"
-                      : "rounded-tr-none"
-                  }`}
+                  item.Sender.id !== User._id
+                    ? "rounded-tl-none"
+                    : "rounded-tr-none"
+                }`}
               >
-
-                <p
-                  className='text-sm opacity-70'>
-                  {item.Sender.name}
-                </p>
+                <p className="text-sm opacity-70">{item.Sender.name}</p>
                 <p
                   className={`text-xl ${
                     item.Sender === User._id ? "font-semibold" : "font-medium"
@@ -214,7 +231,11 @@ const ProjectHome = () => {
             </div>
           ))}
         </div>
-        <div className="inputs fixed bg-gray-800 bottom-0 left-0 w-[400px] z-30 h-[10%] py-2 gap-1 px-1 flex justify-evenly items-center">
+        <div
+          className={`inputs fixed ${
+            Theme == "dark" ? "bg-gray-800" : "bg-gray-300"
+          } bottom-0 left-0 w-[400px] z-30 h-[10%] py-2 gap-1 px-1 flex justify-evenly items-center`}
+        >
           <div
             className={`w-full h-full overflow-hidden flex justify-start items-center ${
               Theme === "dark" ? "bg-gray-700" : "bg-gray-200"
@@ -222,7 +243,19 @@ const ProjectHome = () => {
           >
             <input
               value={Message}
-              onChange={(e) => setMessage(e.target.value)}
+              // onKeyDown={e => {
+              //   if (e.key == 'Enter') {
+              //     SendMessage()
+              //   }
+              // }}
+              onChange={(e) => {
+                setMessage(e.target.value);
+              }}
+              onKeyDown={e => {
+                if (e.key == 'Enter') {
+                  SendMessage()
+                }
+              }}
               placeholder="Enter message"
               className={`w-full h-full input p-2 bg-transparent border-none ${
                 Theme === "dark" ? "outline-gray-600" : "outline-gray-300"
