@@ -7,6 +7,7 @@ import { UserRouter } from './Routes/User.routes.js';
 import morgan from 'morgan';
 import cors from 'cors';
 import { ProjectRouter } from './Routes/Project.routes.js';
+import { GeminiRouter } from './Routes/Gemini.routes.js';
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use(cookieParser())
 app.use(morgan(process.env.ENV))
 
 app.use('/user',UserRouter)
-app.use("/project",ProjectRouter)
+app.use('/project',ProjectRouter)
+app.use('/ai',GeminiRouter)
 
 export {app}

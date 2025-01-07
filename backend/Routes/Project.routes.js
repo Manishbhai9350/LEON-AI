@@ -5,7 +5,8 @@ import { AddUserToProjectController, CreateProjectController, GetAllProjectsCont
 
 const router = Router()
 
-router.post('/create',IsUserAuthenticated,CreateProjectController)
+
+router.post('/create',IsUserAuthenticated,CreateProjectController) 
 router.put('/add-user',IsUserAuthenticated,AddUserToProjectController)
 router.get('/all',IsUserAuthenticated,GetAllProjectsController)
 router.get('/get-project/:projectID',IsUserAuthenticated,GetProjectController)

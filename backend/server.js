@@ -11,6 +11,7 @@ import RedisCLI from './services/Redis.js';
 import { IsUserAuthenticated } from './middleware/Auth.js';
 import { ProjectModel } from './models/Project.model.js';
 import mongoose from 'mongoose';
+import { GenerateResult } from './services/Gemini.js';
 
 const {PORT} = process.env
 
@@ -52,19 +53,24 @@ IO.use(async (socket, next) => {
     }
 });
 IO.on('connection', socket => { 
-    const ProjectID = socket.Project._id;
-    console.log(ProjectID);
-    socket.join(ProjectID.toString());
+    const ProjectID = socket.Project._id.toString();
+    socket.join(ProjectID);
     
-    socket.on('project-message', data => {
-        // Emit the message to all users in the room
-        console.log(data, ProjectID);
-        socket.to(ProjectID.toString()).emit('project-message-receive', data);
+    socket.on('project-message', async data => {
+        socket.broadcast.to(ProjectID).emit('project-message-receive', data);
     });
+    
+    socket.on("remove-ai-boiler-plate",data => {
+        socket.broadcast.to(ProjectID).emit('remove-ai-boiler', data.log_id);
+    })
+
+    socket.on('ai-file-creation',data => {
+        socket.broadcast.to(ProjectID).emit('ai-file-creation',data)
+    })
 
     socket.on('disconnect', () => {
         console.log(`User disconnected from project: ${ProjectID}`);
-        socket.leave(ProjectID.toString());
+        socket.leave(ProjectID);
     });
 });
 

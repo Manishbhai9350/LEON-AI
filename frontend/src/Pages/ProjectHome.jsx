@@ -3,12 +3,19 @@ import { useParams } from "react-router-dom";
 import { IOAxios } from "../config/axios";
 import useTheme from "../hooks/useTheme";
 import { BsFillSendFill } from "react-icons/bs";
-import { FaTimes, FaUser } from "react-icons/fa";
+import { FaJs, FaTimes, FaUser } from "react-icons/fa";
 import { FaUserPlus } from "react-icons/fa";
 import gsap from "gsap";
 import Toast from "react-hot-toast";
 import { useSocket } from "../hooks/socket";
 import useUser from "../hooks/useUser";
+import { GetFileIcon } from "../utils";
+import Markdown from "react-markdown";
+import Syntax from 'react-syntax-highlighter';
+import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import File from "../components/File";
+
+
 
 const ProjectHome = () => {
   const [Message, setMessage] = useState("");
@@ -20,12 +27,15 @@ const ProjectHome = () => {
   const [SelectedUsers, setSelectedUsers] = useState([]);
   const [Users, setUsers] = useState([]);
   const [Project, setProject] = useState(null);
+  const [IsMessageLoading, setIsMessageLoading] = useState(false);
+  const [FileSystem, setFileSystem] = useState([])
 
   const UserPanelRef = useRef(null);
   const UserAddPanelRef = useRef(null);
   const MessageBoxRef = useRef(null);
 
-  const { socket, ConnectSocket, emitEvent, listenEvent, disconnectSocket, removeListener } = useSocket();
+  const { socket, ConnectSocket, emitEvent, listenEvent, disconnectSocket } =
+    useSocket();
   const { User } = useUser();
 
   async function GetProject() {
@@ -53,11 +63,10 @@ const ProjectHome = () => {
       });
       if (res?.data?.success) {
         const users = res.data.Users;
-        users.forEach((user) => {
-          if (user.projects.includes(ProjectID)) {
-            setSelectedUsers((prev) => [...prev, user._id]);
-          }
-        });
+        const projectUsers = users.filter((user) =>
+          user.projects.includes(ProjectID)
+        );
+        setSelectedUsers(projectUsers.map((user) => user._id));
         setUsers(users);
       }
     } catch (error) {
@@ -65,20 +74,108 @@ const ProjectHome = () => {
     }
   }
 
+  async function HandleAiResult(prompt, log_id) {
+    try {
+      setMessage("");
+      setIsMessageLoading(true);
+      const MessagePayload = {
+        Message: "Thinking... Please wait for the AI response.",
+        type: "text",
+        Sender: {
+          name: "@AI",
+          id: User._id,
+          email: User.email,
+          log_id, // Use the generated log_id
+        },
+      };
+      const UserMessagePayload = {
+        Message: prompt,
+        type: "text",
+        Sender: {
+          name: User.name,
+          id: User._id,
+          email: User.email,
+        },
+      };
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        UserMessagePayload,
+        MessagePayload,
+      ]);
+      emitEvent("project-message", JSON.stringify(UserMessagePayload));
+      emitEvent("project-message", JSON.stringify(MessagePayload));
+
+      const Response = await IOAxios.get("/ai/result", {
+        params: {
+          prompt,
+        },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth/v1")}`,
+        },
+      });
+      if (Response?.data?.success) {
+        emitEvent("remove-ai-boiler-plate", {log_id });
+        const { result } = Response.data;
+        const MessageData = {
+          Message: result.Text,
+          type: result.type || "text",
+          Sender: {
+            name: "@AI",
+          },
+        };
+        setMessages((prev) =>
+          prev.filter((msg) => msg.Sender.log_id !== log_id).concat(MessageData)
+        );
+        emitEvent("project-message", JSON.stringify(MessageData));
+        if (result.FileSystem) {
+          setFileSystem((prevFileSystem) => {
+            const NewFiles = [
+              ...prevFileSystem,
+              ...(Array.isArray(result.FileSystem) ? result.FileSystem : [result.FileSystem])
+            ]
+            emitEvent("ai-file-creation", JSON.stringify(NewFiles));
+            return NewFiles
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching AI result:", error);
+    } finally {
+      setIsMessageLoading(false);
+    }
+  }
+
   function SendMessage() {
-    if (!Message) {
+    if (!Message.trim() || IsMessageLoading) {
       Toast.error("Empty Message");
       return; // Prevent further execution if the message is empty
     }
+    const log_id = Math.random().toString(36).substr(2, 9); // Generates a random ID
+    if (Message.toLowerCase().includes("@ai")) {
+      HandleAiResult(Message, log_id);
+      return;
+    }
     const MessagePayload = {
       Message,
+      type: "text",
+      quantity: "plane",
       Sender: {
         id: User._id,
         name: User.name,
         email: User.email,
+        log_id, // Include log_id in the message payload
       },
     };
-    setMessages((prevMessages) => [...prevMessages, MessagePayload]);
+    setMessages((prevMessages) => {
+      // Only add the message if it is not already the last message
+      if (
+        prevMessages.length === 0 ||
+        prevMessages[prevMessages.length - 1].Message !== Message
+      ) {
+        return [...prevMessages, MessagePayload];
+      }
+      return prevMessages; // Prevent duplicate messages
+    });
     emitEvent("project-message", JSON.stringify(MessagePayload));
     setMessage("");
   }
@@ -138,16 +235,31 @@ const ProjectHome = () => {
     GetUsers();
     GetProject();
   }, []);
-  
+
   useEffect(() => {
     if (socket) {
       listenEvent("project-message-receive", (data) => {
         setMessages((prevMessages) => [...prevMessages, JSON.parse(data)]);
       });
+      listenEvent("remove-ai-boiler", (id) => {
+        setMessages((prevMessages) => {
+          const index = prevMessages.findIndex(
+            (message) => message.Sender.log_id === id
+          );
+          if (index !== -1) {
+            return prevMessages.filter((_, i) => i !== index);
+          }
+          return prevMessages;
+        });
+      });
+      listenEvent("ai-file-creation", (data) => {
+        Toast.success("File Creation Recieved");
+        setFileSystem(JSON.parse(data));
+      });
     }
     return () => {
-      disconnectSocket()
-    }
+      disconnectSocket();
+    };
   }, [socket]);
 
   useEffect(() => {
@@ -199,37 +311,46 @@ const ProjectHome = () => {
         <div
           style={{ scrollbarWidth: 0 }}
           ref={MessageBoxRef}
-          className="chat w-full pb-[70px] overflow-y-scroll h-[90%] max-h-[90%] p-2"
+          className="chat w-full pb-[70px] overflow-y-scroll h-[90%] max-h-[90%] px-2"
         >
-          {Messages.map((item, i) => (
-            <div
-              key={i}
-              className={`flex items-center  ${
-                item.Sender.id == User._id ? "justify-end" : "justify-start"
-              } items-center`}
-            >
+          {Messages.map((item, i) => {
+            return (
               <div
-                className={`message rounded-md p-2 w-fit  my-1 ${
-                  Theme === "dark"
-                    ? "bg-[#0c1320] text-white"
-                    : "bg-black text-white"
-                } ${
-                  item.Sender.id !== User._id
-                    ? "rounded-tl-none"
-                    : "rounded-tr-none"
+                key={i}
+                className={`flex items-center  ${
+                  item.Sender?.id === User._id
+                    ? "justify-end"
+                    : item.Sender?.name.toLowerCase() === "ai"
+                    ? "justify-center"
+                    : "justify-start"
                 }`}
               >
-                <p className="text-sm opacity-70">{item.Sender.name}</p>
-                <p
-                  className={`text-xl ${
-                    item.Sender === User._id ? "font-semibold" : "font-medium"
-                  } w-fit h-full rounded-b-2xl leading-6`}
+                <div
+                  className={`message rounded-md px-2 w-fit max-w-fit overflow-x-scroll my-1 ${
+                    Theme === "dark"
+                      ? "bg-[#0c1320] text-white"
+                      : "bg-black text-white"
+                  } ${
+                    item.Sender?.id !== User._id
+                      ? "rounded-tl-none"
+                      : "rounded-tr-none"
+                  }`}
                 >
-                  {item.Message}
-                </p>
+                  <p className="text-sm opacity-70">{item.Sender?.name}</p>
+                  {/* <Markdown remarkPlugins={syntax}  children={item.Message} /> */}
+                  {item.type == "text" ? (
+                    <p>{item.Message}</p>
+                  ) : (
+                    <div className="w-full max-w-full h-auto overscroll-x-scroll">
+                      <Syntax customStyle={{fontSize:12}} style={dark} language={item.type}>
+                        {item.Message}
+                      </Syntax>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div
           className={`inputs fixed ${
@@ -243,17 +364,12 @@ const ProjectHome = () => {
           >
             <input
               value={Message}
-              // onKeyDown={e => {
-              //   if (e.key == 'Enter') {
-              //     SendMessage()
-              //   }
-              // }}
               onChange={(e) => {
                 setMessage(e.target.value);
               }}
-              onKeyDown={e => {
-                if (e.key == 'Enter') {
-                  SendMessage()
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  SendMessage();
                 }
               }}
               placeholder="Enter message"
@@ -267,6 +383,8 @@ const ProjectHome = () => {
             <div
               onClick={SendMessage}
               className={`send rounded-sm cursor-pointer duration-200 ${
+                IsMessageLoading ? "opacity-70" : ""
+              } ${
                 Theme === "dark"
                   ? "hover:bg-black hover:text-zinc-200"
                   : "hover:bg-black hover:text-white"
@@ -361,7 +479,16 @@ const ProjectHome = () => {
         </div>
       </div>
 
-      <div className="code-area flex-1 h-full "></div>
+      <div className="code-area flex justify-start items-start mt-[70px] flex-1 h-full">
+        <div className="files flex flex-col justify-start items-center p-2 gap-2 w-[160px] h-full">
+          {
+            FileSystem && (
+              FileSystem.map((file,i) => <File key={i} Theme={Theme} {...file} />)
+            )
+          }
+        </div>
+        <div className="code flex-1 h-full bg-green-500"></div>
+      </div>
     </main>
   );
 };
