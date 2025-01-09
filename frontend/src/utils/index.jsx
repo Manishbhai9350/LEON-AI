@@ -7,6 +7,8 @@ import { DiPhp } from "react-icons/di";
 import { FaPython } from "react-icons/fa";
 import { FaJava } from "react-icons/fa";
 import { TbBrandCpp } from "react-icons/tb";
+import { SiDotenv } from "react-icons/si"; // Added for .env
+import { IoLogoNodejs } from "react-icons/io5";
 
 const FileData = {
     python: {
@@ -14,7 +16,17 @@ const FileData = {
         icon: FaPython,
         size: 24 // Size for Python icon
     },
+    py: {
+        color: '', // Tailwind color for Python
+        icon: FaPython,
+        size: 24 // Size for Python icon
+    },
     javascript: {
+        color: 'text-yellow-400', // Tailwind color for JavaScript
+        icon: DiJsBadge,
+        size: 24 // Size for JavaScript icon
+    },
+    js: {
         color: 'text-yellow-400', // Tailwind color for JavaScript
         icon: DiJsBadge,
         size: 24 // Size for JavaScript icon
@@ -49,15 +61,30 @@ const FileData = {
         icon: DiCodeBadge,
         size: 24 // Size for Assembly icon
     },
+    asm: {
+        color: 'text-gray-600', // Tailwind color for Assembly
+        icon: DiCodeBadge,
+        size: 24 // Size for Assembly icon
+    },
     rust: {
         color: 'text-orange-600', // Tailwind color for Rust
         icon: FaRust,
         size: 24 // Size for Rust icon
     },
-    php:{
-        color:"",
-        icon:DiPhp,
-        size:24
+    php: {
+        color: "", // Tailwind color for PHP
+        icon: DiPhp,
+        size: 24 // Size for PHP icon
+    },
+    json: {
+        color: 'text-green-500', // Tailwind color for JSON
+        icon: IoLogoNodejs,
+        size: 24 // Size for JSON icon
+    },
+    env: {
+        color: 'text-yellow-500', // Tailwind color for .env
+        icon: SiDotenv,
+        size: 24 // Size for .env icon
     }
 }
 

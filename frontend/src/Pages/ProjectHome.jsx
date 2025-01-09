@@ -11,11 +11,10 @@ import { useSocket } from "../hooks/socket";
 import useUser from "../hooks/useUser";
 import { GetFileIcon } from "../utils";
 import Markdown from "react-markdown";
-import Syntax from 'react-syntax-highlighter';
-import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Syntax from "react-syntax-highlighter";
+import { dark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import File from "../components/File";
-
-
+import { CodeiumEditor } from "@codeium/react-code-editor";
 
 const ProjectHome = () => {
   const [Message, setMessage] = useState("");
@@ -28,7 +27,9 @@ const ProjectHome = () => {
   const [Users, setUsers] = useState([]);
   const [Project, setProject] = useState(null);
   const [IsMessageLoading, setIsMessageLoading] = useState(false);
-  const [FileSystem, setFileSystem] = useState([])
+  const [FileSystem, setFileSystem] = useState(null);
+  const [CurrentFile, setCurrentFile] = useState(0);
+  const [CurrentFileProject, setCurrentFileProject] = useState(0);
 
   const UserPanelRef = useRef(null);
   const UserAddPanelRef = useRef(null);
@@ -114,7 +115,7 @@ const ProjectHome = () => {
         },
       });
       if (Response?.data?.success) {
-        emitEvent("remove-ai-boiler-plate", {log_id });
+        emitEvent("remove-ai-boiler-plate", { log_id });
         const { result } = Response.data;
         const MessageData = {
           Message: result.Text,
@@ -128,13 +129,27 @@ const ProjectHome = () => {
         );
         emitEvent("project-message", JSON.stringify(MessageData));
         if (result.FileSystem) {
-          setFileSystem((prevFileSystem) => {
-            const NewFiles = [
-              ...prevFileSystem,
-              ...(Array.isArray(result.FileSystem) ? result.FileSystem : [result.FileSystem])
-            ]
-            emitEvent("ai-file-creation", JSON.stringify(NewFiles));
-            return NewFiles
+          setFileSystem((PrevProjects) => {
+            let NewProjects = [];
+            if (PrevProjects) {
+              NewProjects = [...PrevProjects];
+            } else {
+              NewProjects = [
+                {
+                  project:
+                    "Project-" + ((PrevProjects?.length + 1) || 1 ),
+                  project_id: Math.random().toString(36).substr(2, 9), // Generate a random ID
+                  data: [
+                    ...(Array.isArray(result.FileSystem)
+                      ? result.FileSystem
+                      : [result.FileSystem]),
+                  ],
+                },
+              ];
+            }
+            emitEvent("ai-file-creation", JSON.stringify(NewProjects));
+            console.log(NewProjects);
+            return NewProjects;
           });
         }
       }
@@ -342,7 +357,11 @@ const ProjectHome = () => {
                     <p>{item.Message}</p>
                   ) : (
                     <div className="w-full max-w-full h-auto overscroll-x-scroll">
-                      <Syntax customStyle={{fontSize:12}} style={dark} language={item.type}>
+                      <Syntax
+                        customStyle={{ fontSize: 12 }}
+                        style={dark}
+                        language={item.type}
+                      >
                         {item.Message}
                       </Syntax>
                     </div>
@@ -479,15 +498,56 @@ const ProjectHome = () => {
         </div>
       </div>
 
-      <div className="code-area flex justify-start items-start mt-[70px] flex-1 h-full">
+      <div className="code-area relative flex justify-start items-start mt-[70px] flex-1 h-full">
         <div className="files flex flex-col justify-start items-center p-2 gap-2 w-[160px] h-full">
-          {
-            FileSystem && (
-              FileSystem.map((file,i) => <File key={i} Theme={Theme} {...file} />)
-            )
-          }
+          {FileSystem &&
+            FileSystem[CurrentFileProject].data.map((file, i) => (
+              <File
+                key={i}
+                idx={i}
+                current={CurrentFile}
+                setCurrent={setCurrentFile}
+                Theme={Theme}
+                {...file}
+              />
+            ))}
         </div>
-        <div className="code flex-1 h-full bg-green-500"></div>
+        <div className="code flex-1 h-full w-full">
+          {FileSystem && FileSystem[CurrentFileProject].data.length > 0 && (
+            <CodeiumEditor
+              language={FileSystem[CurrentFileProject].data[CurrentFile].file}
+              containerStyle={{
+                backgroundColor: Theme === "dark" ? "#1e1e1e" : "#ffffff",
+              }}
+              value={FileSystem[CurrentFileProject].data[CurrentFile].content}
+              onChange={(e) => {
+                setFileSystem(() => {
+                  const NewFiles = [...FileSystem];
+                  NewFiles[CurrentFile].content = e;
+                  return NewFiles;
+                });
+              }}
+              className="w-full h-screen"
+              theme="vs-dark"
+            />
+          )}
+        </div>
+      </div>
+      <div className="current-file-project fixed top-2 right-1/3 z-[80] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2">
+        {FileSystem && FileSystem.length > 0 ? (
+          <select
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-300"
+            onChange={e => setProject(e.target.value)}
+          >
+            {FileSystem.map((project, i) => (
+              <option value={i} key={project.project_id}>
+                {project.project}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400">No projects available</p>
+        )}
       </div>
     </main>
   );

@@ -17,6 +17,74 @@ const model = genAI.getGenerativeModel({
   Never add the file extension in the filename the ext will automatically handle it 
 
     <examples>
+    <example>
+        User: "Create an express server",
+        AI: {
+          "Text": "
+            Here is your express server
+            Use these following commands in your app 
+            npm i 
+            npm run dev
+          ",
+         "quantity": "files",
+          "FileSystem": [
+            {
+              "content": "
+                {
+                  "name": "your-project-name",
+                  "version": "1.0.0",
+                  "description": "A brief description of your project",
+                  "main": "server.js",
+                  "type": "module",
+                  "scripts": {
+                    "dev": "node ./server.js"
+                  },
+                  "author": "Your Name",
+                  "license": "ISC"
+                }
+              ",
+              "ext": ".json",
+              fullname:"package.json",
+              file:"json"
+            },
+            {
+              "content": "
+                {
+                  "name": "your-project-name",
+                  "version": "1.0.0",
+                  "lockfileVersion": 1,
+                  "dependencies": {
+                    "express": {
+                      "version": "^4.17.1",
+                      "resolved": "https://registry.npmjs.org/express/-/express-4.17.1.tgz",
+                      "integrity": "sha512-...your-integrity-hash..."
+                    }
+                  }
+                }
+              ",
+              "ext": ".json",
+              fullname:"package-lock.json",
+              file:"json"
+            },
+            {
+              "content": "
+                import express from 'express';
+                const app = express();
+                app.get('/', (req, res) => {
+                    res.send('Hello World!');
+                });
+                const PORT = process.env.PORT || 3000;
+                app.listen(PORT, () => {
+                    console.log('Server is running on port PORT');
+                });
+              ",
+              "ext": ".js",
+              fullname:"server.js",
+              file:"javascript"
+            },
+          ]
+        }
+      </example>
       <example>
         User: "Hallo Ai",
         AI: {
@@ -52,14 +120,7 @@ const model = genAI.getGenerativeModel({
           ]
         }
       </example>
-      <example>
-        User: "write sum function in js",
-        AI: {
-          "Text": "const sum = (a, b) => a + b;",
-          "quantity": "plane",
-          "type": "javascript",
-        }
-      </example>
+      
       </examples>
 
   `,
