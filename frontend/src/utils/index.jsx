@@ -7,8 +7,17 @@ import { DiPhp } from "react-icons/di";
 import { FaPython } from "react-icons/fa";
 import { FaJava } from "react-icons/fa";
 import { TbBrandCpp } from "react-icons/tb";
-import { SiDotenv } from "react-icons/si"; // Added for .env
+import { SiDotenv, SiThreedotjs, SiTypescript, SiWebgl } from "react-icons/si"; // Added for .env
 import { IoLogoNodejs } from "react-icons/io5";
+
+
+const SpecifigFileNames = {
+    'three.js':{
+        color: '', // Tailwind color for Python
+        icon: SiThreedotjs,
+        size: 24 // Size for Python icon
+    }
+}
 
 const FileData = {
     python: {
@@ -24,6 +33,16 @@ const FileData = {
     javascript: {
         color: 'text-yellow-400', // Tailwind color for JavaScript
         icon: DiJsBadge,
+        size: 24 // Size for JavaScript icon
+    },
+    typescript: {
+        color: 'text-blue-500', // Tailwind color for JavaScript
+        icon: SiTypescript,
+        size: 24 // Size for JavaScript icon
+    },
+    ts: {
+        color: 'text-blue-500', // Tailwind color for JavaScript
+        icon: SiTypescript,
         size: 24 // Size for JavaScript icon
     },
     js: {
@@ -81,6 +100,11 @@ const FileData = {
         icon: IoLogoNodejs,
         size: 24 // Size for JSON icon
     },
+    glsl: {
+        color: 'text-blue-500', // Tailwind color for JSON
+        icon: SiWebgl,
+        size: 24 // Size for JSON icon
+    },
     env: {
         color: 'text-yellow-500', // Tailwind color for .env
         icon: SiDotenv,
@@ -88,13 +112,15 @@ const FileData = {
     }
 }
 
-export function GetFileIcon(file) {
+export function GetFileIcon(file,fullname) {
     const fileType = file.split('.').pop().toLowerCase();
-    const { icon: Icon, color, size } = FileData[fileType] || { icon: null, color: '', size: 24 }; // Default size
+    const { icon: Icon, color, size } = SpecifigFileNames[fullname] || FileData[fileType] || { icon: null, color: '', size: 24 }; // Default size
+
+    let MyIcon = Icon || DiCodeBadge
 
     return (
         <div className={`icon flex justify-center items-center ${color} `}>
-            <Icon size={size} />
+            <MyIcon size={size} />
         </div>
     );
 }

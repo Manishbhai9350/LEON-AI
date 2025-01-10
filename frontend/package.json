@@ -12,6 +12,7 @@
   "dependencies": {
     "@codeium/react-code-editor": "^1.0.12",
     "@gsap/react": "^2.1.1",
+    "@webcontainer/api": "^1.5.1-internal.6",
     "axios": "^1.7.9",
     "gsap": "^3.12.5",
     "react": "^18.3.1",

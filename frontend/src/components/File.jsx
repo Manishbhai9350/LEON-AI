@@ -12,7 +12,7 @@ export default function File({ file,fullname,current,ext, setCurrent, idx, Theme
           : `${current == idx ? 'bg-zinc-800 text-white' : 'bg-gray-300 text-black'}`
       } duration-150 cursor-pointer w-full h-[50px]`}
     >
-      {GetFileIcon(Exts[Exts.length - 1])}
+      {GetFileIcon(Exts[Exts.length - 1],fullname.toLocaleLowerCase())}
       <p
         className={` ${fullname.length > 10 ? 'text-sm' : fullname.length > 5  ? 'text-md' :  'text-xl'} `}
       >

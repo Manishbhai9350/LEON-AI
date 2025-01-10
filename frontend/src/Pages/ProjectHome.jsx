@@ -15,6 +15,7 @@ import Syntax from "react-syntax-highlighter";
 import { dark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import File from "../components/File";
 import { CodeiumEditor } from "@codeium/react-code-editor";
+import { GetWebContainer } from "../utils/WebContainer";
 
 const ProjectHome = () => {
   const [Message, setMessage] = useState("");
@@ -27,9 +28,35 @@ const ProjectHome = () => {
   const [Users, setUsers] = useState([]);
   const [Project, setProject] = useState(null);
   const [IsMessageLoading, setIsMessageLoading] = useState(false);
-  const [FileSystem, setFileSystem] = useState(null);
+  const [FileSystem, setFileSystem] = useState([
+    {
+      project: "Project-1",
+      project_id: "tlcrccp26",
+      "is-server": true,
+      data: [
+        {
+          content:
+            '{\n  "name": "express-server",\n  "version": "1.0.0",\n  "description": "A simple express server",\n  "main": "index.js",\n  "type": "module",\n  "scripts": {\n    "start": "nodemon index.js"\n  },\n  "author": "",\n  "license": "ISC",\n  "dependencies": {\n    "express": "^4.18.2",\n    "nodemon": "^3.0.1"\n  }\n}',
+          ext: ".json",
+          fullname: "package.json",
+          file: "json",
+        },
+        {
+          content:
+            "import express from 'express';\nconst app = express();\nconst port = 3000;\napp.get('/', (req, res) => {\n  res.json({message:'Hello from Express!'});\n});\napp.listen(port, () => {\n  console.log(`Server is running at http://localhost:${port}`);\n});",
+          ext: ".js",
+          fullname: "index.js",
+          file: "javascript",
+        },
+      ],
+    },
+  ]);
   const [CurrentFile, setCurrentFile] = useState(0);
   const [CurrentFileProject, setCurrentFileProject] = useState(0);
+  const [WebContainerInstace, setWebContainerInstace] = useState(null);
+  const [WebContainerFiles, setWebContainerFiles] = useState(null);
+  const [IsWebContainerRunning, setIsWebContainerRunning] = useState(false);
+  const [RunningProcess, setRunningProcess] = useState(null)
 
   const UserPanelRef = useRef(null);
   const UserAddPanelRef = useRef(null);
@@ -38,6 +65,62 @@ const ProjectHome = () => {
   const { socket, ConnectSocket, emitEvent, listenEvent, disconnectSocket } =
     useSocket();
   const { User } = useUser();
+
+  useEffect(() => {
+    
+    return () => {};
+  }, [CurrentFileProject]);
+
+  async function RunWebContainer() {
+    if (!WebContainerInstace) return;
+    // setIsWebContainerRunning(true);
+    if (!FileSystem) return;
+    const CurrentProject = FileSystem[CurrentFileProject];
+    if (!CurrentProject["is-server"]) return;
+
+    let FileTree = {};
+
+    CurrentProject.data.forEach((item) => {
+      FileTree[item.fullname] = {
+        file: {
+          contents: item.content,
+        },
+      };
+    });
+    setWebContainerFiles(FileTree);
+    await WebContainerInstace.mount(FileTree);
+
+    if (RunningProcess) {
+      RunningProcess?.kill()
+      setRunningProcess(null)
+    }
+    
+    const InstallProcess = await WebContainerInstace.spawn("npm", ["install"]);
+    InstallProcess.output.pipeTo(
+      new WritableStream({
+        write: (chunk) => console.log(chunk),
+      })
+    );
+    const RunProcess = await WebContainerInstace.spawn("npm", ["start"]);
+    // setIsWebContainerRunning(false);
+    setRunningProcess(RunProcess)
+    RunProcess.output.pipeTo(
+      new WritableStream({
+        write: (chunk) => console.log(chunk),
+      })
+    );
+    
+    WebContainerInstace.on('server-ready',(port,url) => {
+      console.log(port,url)
+      setIsWebContainerRunning(false)
+    })
+    
+    WebContainerInstace.on('error',(err) => {
+      console.log(err)
+      setIsWebContainerRunning(false)
+    })
+
+  }
 
   async function GetProject() {
     try {
@@ -117,6 +200,7 @@ const ProjectHome = () => {
       if (Response?.data?.success) {
         emitEvent("remove-ai-boiler-plate", { log_id });
         const { result } = Response.data;
+        console.log(result);
         const MessageData = {
           Message: result.Text,
           type: result.type || "text",
@@ -133,22 +217,19 @@ const ProjectHome = () => {
             let NewProjects = [];
             if (PrevProjects) {
               NewProjects = [...PrevProjects];
-            } else {
-              NewProjects = [
-                {
-                  project:
-                    "Project-" + ((PrevProjects?.length + 1) || 1 ),
-                  project_id: Math.random().toString(36).substr(2, 9), // Generate a random ID
-                  data: [
-                    ...(Array.isArray(result.FileSystem)
-                      ? result.FileSystem
-                      : [result.FileSystem]),
-                  ],
-                },
-              ];
             }
-            emitEvent("ai-file-creation", JSON.stringify(NewProjects));
+            NewProjects.push({
+              project: "Project-" + (PrevProjects?.length + 1 || 1),
+              project_id: Math.random().toString(36).substr(2, 9),
+              "is-server": result["is-server"], // Generate a random ID
+              data: [
+                ...(Array.isArray(result.FileSystem)
+                  ? result.FileSystem
+                  : [result.FileSystem]),
+              ],
+            });
             console.log(NewProjects);
+            emitEvent("ai-file-creation", JSON.stringify(NewProjects));
             return NewProjects;
           });
         }
@@ -247,8 +328,20 @@ const ProjectHome = () => {
   };
 
   useEffect(() => {
+    if (WebContainerInstace) {
+      console.log("Web Container Is Booted UP");
+      console.log(WebContainerInstace);
+    } else {
+      console.log("Web Container Is Not Booted ");
+    }
+  }, [WebContainerInstace]);
+
+  useEffect(() => {
     GetUsers();
     GetProject();
+    GetWebContainer().then((container) => {
+      setWebContainerInstace(container);
+    });
   }, []);
 
   useEffect(() => {
@@ -522,9 +615,10 @@ const ProjectHome = () => {
               value={FileSystem[CurrentFileProject].data[CurrentFile].content}
               onChange={(e) => {
                 setFileSystem(() => {
-                  const NewFiles = [...FileSystem];
-                  NewFiles[CurrentFile].content = e;
-                  return NewFiles;
+                  const NewFileSystem = [...FileSystem];
+                  NewFileSystem[CurrentFileProject].data[CurrentFile].content =
+                    e;
+                  return NewFileSystem;
                 });
               }}
               className="w-full h-screen"
@@ -533,11 +627,17 @@ const ProjectHome = () => {
           )}
         </div>
       </div>
-      <div className="current-file-project fixed top-2 right-1/3 z-[80] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2">
+      <div className="current-file-project fixed top-3 right-1/3 z-[80] bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         {FileSystem && FileSystem.length > 0 ? (
           <select
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-300"
-            onChange={e => setProject(e.target.value)}
+            className={`w-full p-3  ${
+              Theme == "dark" ? "bg-gray-600 text-white" : "bg-white text-black"
+            }  rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-300`}
+            value={CurrentFileProject}
+            onChange={(e) => {
+              setCurrentFile(0);
+              setCurrentFileProject(e.target.value);
+            }}
           >
             {FileSystem.map((project, i) => (
               <option value={i} key={project.project_id}>
@@ -546,9 +646,28 @@ const ProjectHome = () => {
             ))}
           </select>
         ) : (
-          <p className="text-gray-500 dark:text-gray-400">No projects available</p>
+          <p className="text-gray-500 p-3 dark:text-gray-400">
+            No projects available
+          </p>
         )}
       </div>
+      {FileSystem && FileSystem[CurrentFileProject]["is-server"] && (
+        <div
+          onClick={(e) => {
+            if (IsWebContainerRunning) {
+              Toast.error("Container Is Running");
+              return;
+            } else {
+              RunWebContainer();
+            }
+          }}
+          className={`fixed w-fit px-5 h-[40px] flex justify-center items-center rounded-md cursor-pointer bg-emerald-600 hover:bg-emerald-500 duration-150 top-3 right-1/2 z-[80]`}
+        >
+          <p className="pointer-events-none text-2xl font-medium">
+            {IsWebContainerRunning ? "Running..." : "RUN"}
+          </p>
+        </div>
+      )}
     </main>
   );
 };

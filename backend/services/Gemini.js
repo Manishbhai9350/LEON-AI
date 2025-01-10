@@ -27,6 +27,7 @@ const model = genAI.getGenerativeModel({
             npm run dev
           ",
          "quantity": "files",
+         "is-server":"true",
           "FileSystem": [
             {
               "content": "
