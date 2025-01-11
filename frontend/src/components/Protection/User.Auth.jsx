@@ -39,7 +39,6 @@ const UserAuthProtector = ({ children }) => {
       } catch (error) {
         Toast.error("UnAuthenticated");
         localStorage.setItem("auth/v1", "");
-        console.log(error);
         setUser({name:'',email:'',password:''})
         navigate("/auth");
       }

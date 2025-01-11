@@ -64,8 +64,8 @@ IO.on('connection', socket => {
         socket.broadcast.to(ProjectID).emit('remove-ai-boiler', data.log_id);
     })
 
-    socket.on('ai-file-creation',data => {
-        socket.broadcast.to(ProjectID).emit('ai-file-creation',data)
+    socket.on('file-system-update',data => {
+        socket.broadcast.to(ProjectID).emit('file-system-update',data)
     })
 
     socket.on('disconnect', () => {

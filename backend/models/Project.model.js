@@ -14,6 +14,7 @@ const ProjectSchema = mongoose.Schema({
             ref:'User'
         }
     ],
+    FileSystem:[],
     author:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'User'

@@ -36,7 +36,7 @@ const Auth = () => {
       navigate('/') // Fixed: Navigate -> navigate
     } catch (error) {
       Toast.error("Invalid Credentials")
-      console.log('Login error:', error)
+      
     }
   }
 
@@ -52,7 +52,7 @@ const Auth = () => {
       navigate('/') // Fixed: Navigate -> navigate
     } catch (error) {
       Toast.error("Something Went Wrong")
-      console.log('Signup error:', error)
+      
     }
   }
 

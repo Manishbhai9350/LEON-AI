@@ -184,3 +184,41 @@ export const GetProjectController = async (req, res) => {
     });
   }
 };
+
+export const UpdateFileSystem = async (req, res) => {
+  try {
+    const { projectID } = req.params;
+    const { FileSystem } = req.body;
+
+
+    if (!Array.isArray(FileSystem)) {
+      return res.status(400).json({
+        message: "FileSystem must be an array.",
+        success: false,
+      });
+    }
+
+    const Project = await ProjectModel.findById(projectID);
+    if (!Project) {
+      return res.status(404).json({
+        message: "Project not found",
+        success: false,
+      });
+    }
+
+    Project.FileSystem = FileSystem;
+    await Project.save();
+
+    return res.status(200).json({
+      message: "FileSystem updated successfully",
+      success: true,
+      Project,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Something went wrong",
+      success: false,
+    });
+  }
+};

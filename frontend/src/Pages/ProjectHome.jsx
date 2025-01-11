@@ -16,6 +16,8 @@ import { dark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import File from "../components/File";
 import { CodeiumEditor } from "@codeium/react-code-editor";
 import { GetWebContainer } from "../utils/WebContainer";
+import Terminal, { ColorMode, TerminalOutput } from 'react-terminal-ui';
+
 
 const ProjectHome = () => {
   const [Message, setMessage] = useState("");
@@ -28,48 +30,67 @@ const ProjectHome = () => {
   const [Users, setUsers] = useState([]);
   const [Project, setProject] = useState(null);
   const [IsMessageLoading, setIsMessageLoading] = useState(false);
-  const [FileSystem, setFileSystem] = useState([
-    {
-      project: "Project-1",
-      project_id: "tlcrccp26",
-      "is-server": true,
-      data: [
-        {
-          content:
-            '{\n  "name": "express-server",\n  "version": "1.0.0",\n  "description": "A simple express server",\n  "main": "index.js",\n  "type": "module",\n  "scripts": {\n    "start": "nodemon index.js"\n  },\n  "author": "",\n  "license": "ISC",\n  "dependencies": {\n    "express": "^4.18.2",\n    "nodemon": "^3.0.1"\n  }\n}',
-          ext: ".json",
-          fullname: "package.json",
-          file: "json",
-        },
-        {
-          content:
-            "import express from 'express';\nconst app = express();\nconst port = 3000;\napp.get('/', (req, res) => {\n  res.json({message:'Hello from Express!'});\n});\napp.listen(port, () => {\n  console.log(`Server is running at http://localhost:${port}`);\n});",
-          ext: ".js",
-          fullname: "index.js",
-          file: "javascript",
-        },
-      ],
-    },
-  ]);
+  const [FileSystem, setFileSystem] = useState();
   const [CurrentFile, setCurrentFile] = useState(0);
   const [CurrentFileProject, setCurrentFileProject] = useState(0);
   const [WebContainerInstace, setWebContainerInstace] = useState(null);
   const [WebContainerFiles, setWebContainerFiles] = useState(null);
   const [IsWebContainerRunning, setIsWebContainerRunning] = useState(false);
-  const [RunningProcess, setRunningProcess] = useState(null)
-
+  const [RunningProcess, setRunningProcess] = useState(null);
+  const [PreviewURL, setPreviewURL] = useState("No Url");
+  const [IsPreview, setIsPreview] = useState(false)
+  const [IsLogs, setIsLogs] = useState(false)
+  const [Logs, setLogs] = useState('')
+  
   const UserPanelRef = useRef(null);
   const UserAddPanelRef = useRef(null);
   const MessageBoxRef = useRef(null);
-
+  const TerminalConRef = useRef(null);
+  const SaveFileTimeOutID = useRef(null)
+  
+  const LastCodeUpdate = useRef(0)
+  
   const { socket, ConnectSocket, emitEvent, listenEvent, disconnectSocket } =
-    useSocket();
+  useSocket();
   const { User } = useUser();
 
-  useEffect(() => {
-    
-    return () => {};
-  }, [CurrentFileProject]);
+  
+  
+  function UpdateURL(url) {
+    setPreviewURL(url);
+  }
+
+
+  function UpdateFile(data){
+    setFileSystem(prev => {
+      const NewFiles = [...prev]
+      NewFiles[CurrentFileProject].data[CurrentFile].content = data
+      clearTimeout(SaveFileTimeOutID.current)
+      SaveFileTimeOutID.current = setTimeout(SaveFileSystem.bind(NewFiles), 1500);
+      return NewFiles
+    })
+  }
+
+  async function SaveFileSystem(FileSystem) {
+    try {
+      emitEvent("file-system-update", JSON.stringify(FileSystem || this));
+      const res = await IOAxios.put(`/project/update-file-system/${ProjectID}`, {
+        FileSystem:FileSystem || this, // Send the current file system
+      },{
+        headers:{
+          Authorization:`Bearer ${localStorage.getItem('auth/v1')}`
+        }
+      });
+      if (res.data.success) {
+        Toast.success("File system updated successfully");
+      } else {
+        Toast.error("Failed to update file system");
+      }
+    } catch (error) {
+      console.error("Error saving file system:", error);
+      Toast.error("Error saving file system");
+    }
+  }
 
   async function RunWebContainer() {
     if (!WebContainerInstace) return;
@@ -91,35 +112,44 @@ const ProjectHome = () => {
     await WebContainerInstace.mount(FileTree);
 
     if (RunningProcess) {
-      RunningProcess?.kill()
-      setRunningProcess(null)
+      RunningProcess?.kill();
+      setRunningProcess(null);
+      setPreviewURL('')
+      setIsPreview(false)
     }
-    
+
     const InstallProcess = await WebContainerInstace.spawn("npm", ["install"]);
+    setIsLogs(true)
     InstallProcess.output.pipeTo(
       new WritableStream({
-        write: (chunk) => console.log(chunk),
+        write: (chunk) => setLogs(prev => prev + '\n' + chunk),
       })
     );
     const RunProcess = await WebContainerInstace.spawn("npm", ["start"]);
-    // setIsWebContainerRunning(false);
-    setRunningProcess(RunProcess)
+    setRunningProcess(RunProcess);
     RunProcess.output.pipeTo(
       new WritableStream({
-        write: (chunk) => console.log(chunk),
+        write:chunk => setLogs(prev => prev + '\n' + chunk),
       })
     );
-    
-    WebContainerInstace.on('server-ready',(port,url) => {
-      console.log(port,url)
-      setIsWebContainerRunning(false)
-    })
-    
-    WebContainerInstace.on('error',(err) => {
-      console.log(err)
-      setIsWebContainerRunning(false)
-    })
 
+    WebContainerInstace.on("server-ready", (port, url) => {
+      setPreviewURL(url);
+      setIsPreview(true);
+      setIsWebContainerRunning(false);
+      setIsLogs(false)
+    });
+
+    WebContainerInstace.on("preview-message", (...data) => {
+      console.log(...data)
+    });
+    
+    WebContainerInstace.on("error", (err) => {
+      setPreviewURL('');
+      setIsPreview(false);
+      setLogs(prev => prev + '\n' + err.toString())
+      setIsWebContainerRunning(false);
+    });
   }
 
   async function GetProject() {
@@ -130,6 +160,7 @@ const ProjectHome = () => {
         },
       });
       if (res.data.success) {
+        setFileSystem(res.data.Project.FileSystem)
         ConnectSocket(ProjectID);
         setProject(res.data.Project);
       }
@@ -200,7 +231,6 @@ const ProjectHome = () => {
       if (Response?.data?.success) {
         emitEvent("remove-ai-boiler-plate", { log_id });
         const { result } = Response.data;
-        console.log(result);
         const MessageData = {
           Message: result.Text,
           type: result.type || "text",
@@ -228,8 +258,8 @@ const ProjectHome = () => {
                   : [result.FileSystem]),
               ],
             });
-            console.log(NewProjects);
-            emitEvent("ai-file-creation", JSON.stringify(NewProjects));
+            emitEvent("file-system-update", JSON.stringify(NewProjects));
+            SaveFileSystem(NewProjects)
             return NewProjects;
           });
         }
@@ -320,19 +350,18 @@ const ProjectHome = () => {
     setAddUserPanel((prev) => !prev);
   }
 
-  const scrollToBottom = () => {
-    if (MessageBoxRef.current) {
-      MessageBoxRef.current.scrollTop =
-        MessageBoxRef.current.scrollHeight * 1.3;
+  const scrollToBottom = (Ref) => {
+    if (Ref.current) {
+      Ref.current.scrollTop =
+        Ref.current.scrollHeight * 1.3;
     }
   };
 
   useEffect(() => {
     if (WebContainerInstace) {
       console.log("Web Container Is Booted UP");
-      console.log(WebContainerInstace);
     } else {
-      console.log("Web Container Is Not Booted ");
+      console.log("Web Container Is Booting ");
     }
   }, [WebContainerInstace]);
 
@@ -360,8 +389,8 @@ const ProjectHome = () => {
           return prevMessages;
         });
       });
-      listenEvent("ai-file-creation", (data) => {
-        Toast.success("File Creation Recieved");
+      listenEvent("file-system-update", (data) => {
+        Toast.success("Files Updated");
         setFileSystem(JSON.parse(data));
       });
     }
@@ -371,8 +400,13 @@ const ProjectHome = () => {
   }, [socket]);
 
   useEffect(() => {
-    scrollToBottom(); // Scroll to bottom after receiving a message
+    scrollToBottom(MessageBoxRef); // Scroll to bottom after receiving a message
   }, [Messages]);
+
+  useEffect(() => {
+    scrollToBottom(TerminalConRef); // Scroll to bottom after receiving a message
+  }, [Logs,IsLogs]);
+  
 
   return (
     <main
@@ -591,8 +625,8 @@ const ProjectHome = () => {
         </div>
       </div>
 
-      <div className="code-area relative flex justify-start items-start mt-[70px] flex-1 h-full">
-        <div className="files flex flex-col justify-start items-center p-2 gap-2 w-[160px] h-full">
+      <div className="code-area relative flex flex-col justify-start items-start mt-[60px] flex-1 h-full">
+        <div className="files flex justify-start items-center p-2 gap-2 w-[160px]">
           {FileSystem &&
             FileSystem[CurrentFileProject].data.map((file, i) => (
               <File
@@ -613,26 +647,20 @@ const ProjectHome = () => {
                 backgroundColor: Theme === "dark" ? "#1e1e1e" : "#ffffff",
               }}
               value={FileSystem[CurrentFileProject].data[CurrentFile].content}
-              onChange={(e) => {
-                setFileSystem(() => {
-                  const NewFileSystem = [...FileSystem];
-                  NewFileSystem[CurrentFileProject].data[CurrentFile].content =
-                    e;
-                  return NewFileSystem;
-                });
-              }}
+              onChange={(e) => UpdateFile(e)}
               className="w-full h-screen"
               theme="vs-dark"
             />
           )}
         </div>
       </div>
-      <div className="current-file-project fixed top-3 right-1/3 z-[80] bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-        {FileSystem && FileSystem.length > 0 ? (
+      <div className="nav flex justify-start items-center gap-4  bg-transparent fixed top-3 right-1/4 z-[80] rounded-lg shadow-lg">
+        {FileSystem && FileSystem.length > 0 ? 
+          <>
           <select
             className={`w-full p-3  ${
               Theme == "dark" ? "bg-gray-600 text-white" : "bg-white text-black"
-            }  rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-300`}
+            }  rounded-md focus:outline-none`}
             value={CurrentFileProject}
             onChange={(e) => {
               setCurrentFile(0);
@@ -645,14 +673,18 @@ const ProjectHome = () => {
               </option>
             ))}
           </select>
-        ) : (
+          </>
+        : <>
           <p className="text-gray-500 p-3 dark:text-gray-400">
             No projects available
           </p>
-        )}
-      </div>
-      {FileSystem && FileSystem[CurrentFileProject]["is-server"] && (
-        <div
+        
+          </>
+        }
+        {FileSystem && FileSystem[CurrentFileProject]["is-server"] && (
+       (
+        <>
+         <div
           onClick={(e) => {
             if (IsWebContainerRunning) {
               Toast.error("Container Is Running");
@@ -661,13 +693,81 @@ const ProjectHome = () => {
               RunWebContainer();
             }
           }}
-          className={`fixed w-fit px-5 h-[40px] flex justify-center items-center rounded-md cursor-pointer bg-emerald-600 hover:bg-emerald-500 duration-150 top-3 right-1/2 z-[80]`}
+          className={`w-fit px-5 h-[40px] flex justify-center items-center rounded-md cursor-pointer bg-emerald-600 hover:bg-emerald-500 duration-150 top-3 right-1/2 z-[80]`}
         >
           <p className="pointer-events-none text-2xl font-medium">
             {IsWebContainerRunning ? "Running..." : "RUN"}
           </p>
         </div>
+         <div
+          onClick={e => setIsPreview(true)}
+          className={`w-fit px-5 h-[40px] flex justify-center items-center rounded-md cursor-pointer bg-emerald-600 hover:bg-emerald-500 duration-150 top-3 right-[58%] z-[80]`}
+        >
+          <p className="pointer-events-none text-2xl font-medium">
+            Preview
+          </p>
+        </div>
+         <div
+          onClick={e => setIsLogs(true)}
+          className={`w-fit px-5 h-[40px] flex justify-center items-center rounded-md cursor-pointer bg-emerald-600 hover:bg-emerald-500 duration-150 top-3 right-[58%] z-[80]`}
+        >
+          <p className="pointer-events-none text-2xl font-medium">
+            Logs
+          </p>
+        </div>
+        </>
+
+       )
       )}
+      </div>
+      
+      {IsPreview && (
+        <div className="preview flex flex-col justify-start items-center h-[90%] w-[90%] overflow-hidden top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-md fixed z-[90] bg-white ">
+          <div className="nav px-1 flex justify-evenly items-center w-full h-[40px]">
+            <div onClick={e => {
+              if (RunningProcess) {
+                RunningProcess.kill()
+              }
+              setIsPreview(false)
+            }} className="close h-full  flex justify-center items-center">
+              <div className="dot w-4 aspect-square hover:scale-125 duration-200 cursor-pointer rounded-full bg-red-500"></div>
+            </div>
+            <div onClick={e => setIsPreview(false)} className="minimize h-full  flex justify-center items-center">
+              <div className="dot w-4 aspect-square hover:scale-125 duration-200 cursor-pointer rounded-full bg-yellow-500"></div>
+            </div>
+            <input
+              type="text"
+              value={PreviewURL}
+              onChange={e => UpdateURL(e.target.value)}
+              className={`w-[95%] h-full outline-none border-none p-3 text-gray-700 placeholder-gray-500 focus:outline-none`}
+            />
+          </div>
+          <iframe
+            title="preview"
+            className="w-full flex-1"
+            src={PreviewURL}
+          />
+        </div>
+      )}
+
+      {
+        IsLogs && (
+          <div style={{scrollbarWidth:0}} className="preview  flex flex-col justify-start items-center max-h-[90%] h-[90%] w-[90%] overflow-hidden top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-md bg-[#252A33] fixed z-[90]">
+            <div className="nav fixed top-0 left-0 overflow-hidden w-full h-[50px] bg-gray-600 z-[100] flex justify-start items-center">
+              <div className="btn h-full aspect-square flex justify-center items-center">
+                <div onClick={e => setIsLogs(false)} className="close w-4 h-4 bg-red-400 cursor-pointer rounded-full duration-200 hover:scale-125"></div>
+              </div>
+              <p className={`${Theme == 'dark' ? 'text-white' : 'text-black'} flex-1`}>Terminal</p>
+            </div>
+            <div ref={TerminalConRef} style={{scrollbarWidth:'0!important'}} className="w-full flex-1 overflow-y-scroll">
+            <Terminal height="100%" name="Terminal"  redBtnCallback={e => setIsLogs(false)}  colorMode={ Theme == 'dark' ?  ColorMode.Dark : ColorMode.Light } >
+              {Logs}
+            </Terminal>
+            </div>
+        </div>
+        )
+      }
+
     </main>
   );
 };
