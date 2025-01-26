@@ -51,7 +51,9 @@ export const GetAllProjectsController = async (req, res) => {
       Projects,
     });
   } catch (error) {
+    if(process.env.ENV == 'dev'){
     console.log(error);
+    }
     return res.status(500).json({
       message: "Something Went Wrong",
       success: false,
@@ -83,7 +85,9 @@ export const NomalizeProjectIDS = (ProjectUsers, Users, authorID) => {
       final.push(user);
     }
     if (!(Users.find((e) => e == user) && user == authorID.toString())) {
-      console.log(user);
+      if(process.env.ENV == 'dev'){
+        console.log(user);
+      }
       final.push(user);
     }
   });
@@ -149,7 +153,9 @@ export const AddUserToProjectController = async (req, res) => {
       Project,
     });
   } catch (error) {
-    console.log(error);
+    if(process.env.ENV == 'dev'){ 
+      console.log(error);
+    }
     return res.status(500).json({
       message: "Something went wrong",
       success: false,
@@ -177,7 +183,9 @@ export const GetProjectController = async (req, res) => {
       Project,
     });
   } catch (error) {
-    console.log(error);
+    if(process.env.ENV == 'dev'){  
+      console.log(error);
+    }
     return res.status(500).json({
       message: "Something Went Wrong",
       success: false,
@@ -215,7 +223,9 @@ export const UpdateFileSystem = async (req, res) => {
       Project,
     });
   } catch (error) {
-    console.log(error);
+    if(process.env.ENV == 'dev'){
+      console.log(error);
+    }
     return res.status(500).json({
       message: "Something went wrong",
       success: false,

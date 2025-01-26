@@ -49,7 +49,9 @@ export const CreateUserController = async (req, res) => {
       success: true,
     });
   } catch (error) {
-    console.log(error);
+    if(process.env.ENV == 'dev'){
+      console.log(error);
+    }
     return res.status(500).json({
       message: "Something went wrong",
       success: false,
@@ -100,7 +102,9 @@ export const LoginUserController = async (req, res) => {
       success: true,
     });
   } catch (error) {
-    console.log(error)
+    if(process.env.ENV == 'dev'){
+      console.log(error)
+    }
     return res.status(500).json({
       message: "Something went wrong",
       success: false,
@@ -122,7 +126,9 @@ export const ProfileController = async (req,res) => {
       success: true,
     })
   } catch (error) {
-    console.log(error)
+    if(process.env.ENV == 'dev'){
+      console.log(error)
+    }
     return res.status(500).json({
       message: "Something went wrong",
       success: false,
@@ -166,7 +172,9 @@ export const GetAllUsersController = async (req,res) => {
       Users:AllUsers
     })
   } catch (error) {
-    console.log(error)
+    if(process.env.ENV == 'dev'){
+      console.log(error)
+    }
     return res.status(500).json({
       message: "Something went wrong",
       success: false,

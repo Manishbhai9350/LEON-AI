@@ -9,7 +9,6 @@ const RedisOptions = {
     password: process.env.REDIS_PASSWORD,
 }
 
-console.log(RedisOptions)
 
 const RedisCLI = new Redis(RedisOptions)
 
@@ -18,7 +17,9 @@ RedisCLI.on('connect',() => {
 })
 RedisCLI.on('error',err => {
     console.log('Error While Connecting To Redis')
-    console.log(err)
+    if(process.env.ENV == 'dev'){
+        console.log(err)
+    }
 })
 
 export default RedisCLI

@@ -69,7 +69,9 @@ IO.on('connection', socket => {
     })
 
     socket.on('disconnect', () => {
-        console.log(`User disconnected from project: ${ProjectID}`);
+        if(process.env.ENV == 'dev'){
+            console.log(`User disconnected from project: ${ProjectID}`);
+        }
         socket.leave(ProjectID);
     });
 });
