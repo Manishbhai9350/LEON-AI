@@ -272,7 +272,7 @@ const ProjectHome = () => {
   }
 
   function SendMessage() {
-    if (!Message.trim() || IsMessageLoading) {
+    if (!Message.trim()) {
       Toast.error("Empty Message");
       return; // Prevent further execution if the message is empty
     }
@@ -308,6 +308,7 @@ const ProjectHome = () => {
 
   const AddUsers = async () => {
     try {
+
       const res = await IOAxios.put(
         `/project/add-user`,
         {
@@ -627,8 +628,8 @@ const ProjectHome = () => {
 
       <div className="code-area relative flex flex-col justify-start items-start mt-[60px] flex-1 h-full">
         <div className="files flex justify-start items-center p-2 gap-2 w-[160px]">
-          {FileSystem &&
-            FileSystem[CurrentFileProject].data.map((file, i) => (
+          {(FileSystem && FileSystem[CurrentFileProject] && FileSystem[CurrentFileProject]?.data) &&
+            FileSystem[CurrentFileProject]?.data?.map((file, i) => (
               <File
                 key={i}
                 idx={i}
@@ -640,7 +641,7 @@ const ProjectHome = () => {
             ))}
         </div>
         <div className="code flex-1 h-full w-full">
-          {FileSystem && FileSystem[CurrentFileProject].data.length > 0 && (
+          {FileSystem && FileSystem[CurrentFileProject] &&  FileSystem[CurrentFileProject].data.length > 0 && (
             <CodeiumEditor
               language={FileSystem[CurrentFileProject].data[CurrentFile].file}
               containerStyle={{
@@ -681,7 +682,7 @@ const ProjectHome = () => {
         
           </>
         }
-        {FileSystem && FileSystem[CurrentFileProject]["is-server"] && (
+        {FileSystem && FileSystem[CurrentFileProject] && FileSystem[CurrentFileProject]["is-server"] && (
        (
         <>
          <div
