@@ -7,11 +7,15 @@ import Nav from './components/Nav';
 import UserAuthProtector from './components/Protection/User.Auth';
 import Logout from './Pages/Logout';
 import ProjectHome from './Pages/ProjectHome';
+import {Helmet} from 'react-helmet-async'
 
 function App() {
 
   return (
-    <main className='h-screen relative'>  
+    <main className='h-screen relative'> 
+    {/* <Helmet>
+        <link rel="preload" href="https://w-corp-staticblitz.com/fetch.worker.1b4252dd.js" as="worker" />
+      </Helmet>  */}
       <Toaster />
       <Routes>
         <Route path='/' element={<UserAuthProtector><Home /></UserAuthProtector>} />

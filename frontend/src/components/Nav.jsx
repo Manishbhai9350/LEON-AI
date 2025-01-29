@@ -11,43 +11,58 @@ const Nav = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [isCreatingProject, setIsCreatingProject] = useState(false); // State to track if project creation is in progress
+  const [controller, setController] = useState(null); // Keep it lowercase for consistency
 
-  const handleCreateProject = async () => {
-    if (isCreatingProject) return; // Disable button if project creation is already in progress
-    setIsCreatingProject(true); // Set state to indicate project creation is in progress
-    try {
-      const response = await IOAxios.post(
-        "/project/create",
-        { name: projectName },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("auth/v1")}`,
-          },
-        }
-      );
-      const Project = response?.data?.Project;
-      if (response.data.success && Project) {
-        // Handle success
-        Toast.success("Project created successfully"); // Use Toast for success notification
-        setShowPopup(false);
-        setProjectName("");
-      } else {
-        Toast.error("Failed to create project"); // Use Toast for error notification
+const handleCreateProject = async () => {
+  if (isCreatingProject) return;
+  setIsCreatingProject(true);
+
+  const newController = new AbortController(); // Create a new AbortController inside function
+  setController(newController); // Store in state
+
+  try {
+    const response = await IOAxios.post(
+      "/project/create",
+      { name: projectName },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("auth/v1")}`,
+        },
+        signal: newController.signal, // Attach signal to Axios request
       }
-    } catch (error) {
-      Toast.error("Error creating project"); // Use Toast for error notification
-    } finally {
-      setIsCreatingProject(false); // Reset state after project creation attempt
-    }
-  };
+    );
 
-  async function CancelProject(){
-    try {
-      setShowPopup(false)
-    } catch (error) {
-      
+    const Project = response?.data?.Project;
+    if (response.data.success && Project) {
+      Toast.success("Project created successfully");
+      setShowPopup(false);
+      setProjectName("");
+      window.location.reload();
+    } else {
+      Toast.error("Failed to create project");
     }
+  } catch (error) {
+    if (error.name === "AbortError") {
+      console.log("Request aborted");
+      Toast.error("Project creation canceled");
+    } else {
+      Toast.error("Error creating project");
+    }
+  } finally {
+    setIsCreatingProject(false);
+    setController(null); // Reset controller after request completion
   }
+};
+
+const CancelProject = () => {
+  if (controller) {
+    controller.abort(); // Abort the request
+    setController(null); // Reset controller state
+  }
+  setShowPopup(false);
+};
+
+
 
   return (
     <nav
