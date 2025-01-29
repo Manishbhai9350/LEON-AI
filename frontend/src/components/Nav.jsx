@@ -41,6 +41,14 @@ const Nav = () => {
     }
   };
 
+  async function CancelProject(){
+    try {
+      setShowPopup(false)
+    } catch (error) {
+      
+    }
+  }
+
   return (
     <nav
       className={`px-4 h-[70px] z-50 transition-all duration-300 ease-in-out flex justify-between items-center fixed top-0 left-0 w-screen ${
@@ -113,7 +121,7 @@ const Nav = () => {
                   />
                   <div className="flex gap-3">
                     <button
-                      onClick={() => setShowPopup(false)}
+                      onClick={CancelProject}
                       className={`flex-1 py-2 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105 ${
                         Theme === "dark"
                           ? "bg-red-500/60 hover:bg-red-500"

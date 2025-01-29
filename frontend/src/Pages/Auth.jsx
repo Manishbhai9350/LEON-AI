@@ -12,6 +12,7 @@ const Auth = () => {
   
   const { Theme } = useTheme()
   const [isLogin, setIsLogin] = useState(true)
+  const [IsLoading, setIsLoading] = useState(false)
   const [loginData, setLoginData] = useState({
     email: '',
     password: ''
@@ -26,8 +27,10 @@ const Auth = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault()
+    if(IsLoading) return;
     try {
       const {email, password} = loginData
+      setIsLoading(true)
       const res = await IOAxios.post('/user/login', {email, password},{headers: { Authorization: `Bearer ${localStorage.getItem('auth/v1')}` },}) // Added: Login API call
       const {Token,User} = res.data
       localStorage.setItem('auth/v1', Token)
@@ -36,14 +39,17 @@ const Auth = () => {
       navigate('/') // Fixed: Navigate -> navigate
     } catch (error) {
       Toast.error("Invalid Credentials")
-      
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleSignup = async (e) => {
     e.preventDefault()
+    if(IsLoading) return;
     try {
       const {email, name, password} = signupData
+      setIsLoading(true)
       const res = await IOAxios.post('/user/register', {name, email, password},{headers: { Authorization: `Bearer ${localStorage.getItem('auth/v1')}` },})
       const {Token,User} = res.data // Fixed: Removed unused User variable
       setUser(User)
@@ -52,7 +58,8 @@ const Auth = () => {
       navigate('/') // Fixed: Navigate -> navigate
     } catch (error) {
       Toast.error("Something Went Wrong")
-      
+    } finally{
+      setIsLoading(false)
     }
   }
 

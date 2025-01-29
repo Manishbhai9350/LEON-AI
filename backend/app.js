@@ -13,8 +13,14 @@ const app = express();
 
 CONNECT()
 
+app.use((req, res, next) => {
+    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+    res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+    next();
+});
+
 app.use(cors({
-    origin:'*',
+    origin:process.env.CLIENT_URI,
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials:true,
     preflightContinue:true,

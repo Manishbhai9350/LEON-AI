@@ -6,7 +6,9 @@ export const InitializeSockets = (server) => {
   // Should accept HTTP server, not Express app
   Io = new Server(server, {
     cors: {
+      origin:process.env.CLIENT_URI,
       credentials: true, // Need CORS config to match frontend
+      methods:'*',
     },
   });
   return Io;

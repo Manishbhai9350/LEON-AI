@@ -16,16 +16,24 @@ const UserAuthProtector = ({ children }) => {
     async function Authenticate() {
       try {
         const Token = localStorage.getItem("auth/v1");
+        console.log(Token)
         if (!Token && pathname == "/") {
+          console.log('No Token and on /')
           localStorage.setItem("auth/v1", "");
           setUser({name:'',email:'',password:''})
-          return navigate("/auth");
+          navigate("/auth");
+          setIsAuthenticating(false)
         } else if (!Token && pathname == "/auth") {
+          console.log('No Token and on /auth')
+          localStorage.setItem("auth/v1", "");
+          setUser({name:'',email:'',password:''})
           return setIsAuthenticating(false);
         }
-
+        
         if (Token) {
+          console.log('Token Present Getting Profile')
           const Res = await IOAxios.get("/user/profile",{headers: { Authorization: `Bearer ${localStorage.getItem('auth/v1')}` },});
+          console.log('Got The Profile')
           const User = Res?.data?.User;
           if (User) {
             setUser(User);
@@ -33,7 +41,8 @@ const UserAuthProtector = ({ children }) => {
           } else {
             localStorage.setItem("auth/v1", "");
             setUser({name:'',email:'',password:''})
-            return navigate("/auth");
+            navigate("/auth");
+            setIsAuthenticating(true)
           }
         }
       } catch (error) {
