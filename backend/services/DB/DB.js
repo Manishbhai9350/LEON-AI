@@ -8,7 +8,7 @@ export async function CONNECT(){
             console.log(process.env.MONGODB_URL)
         }
         await mongoose.connect(process.env.MONGODB_URL)
-        console.clear()
+        // console.clear()
         console.log('CONNECTED TO DB')
     } catch (error) {
         if(process.env.ENV == 'dev'){

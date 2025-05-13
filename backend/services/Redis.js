@@ -5,9 +5,11 @@ configDotenv()
 
 const RedisOptions = {
     host:process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT,
+    port: Number(process.env.REDIS_PORT),
     password: process.env.REDIS_PASSWORD,
 }
+
+console.log(RedisOptions)
 
 
 const RedisCLI = new Redis(RedisOptions)
